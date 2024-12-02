@@ -19,7 +19,7 @@ public abstract class AbstractKafkaChunkingProducer<T> extends ClosableAbstractC
         this.kafkaProducer = new KafkaProducer<>(kafkaProperties);
     }
 
-    protected void sendChunk(Chunk chunk) {
+    protected final void sendChunk(Chunk chunk) {
         try {
             String encodedChunk = chunk.encodeToJson();
 

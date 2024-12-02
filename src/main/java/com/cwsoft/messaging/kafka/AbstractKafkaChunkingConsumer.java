@@ -33,13 +33,12 @@ public abstract class AbstractKafkaChunkingConsumer<T> extends ClosableAbstractC
      * Provides the source of the messages (in this case, the Kafka topic name).
      */
     @Override
-    public String getSource() {
+    public final String getSource() {
         return topic;
     }
 
-
     @Override
-    protected  Chunk retrieveChunk(Duration timeout) {
+    protected final Chunk retrieveChunk(Duration timeout) {
         log.debug("Polling Kafka topic [{}] with timeout [{}]", topic, timeout);
         ConsumerRecords<String, String> records = kafkaConsumer.poll(timeout);
         if (!records.isEmpty()) {
