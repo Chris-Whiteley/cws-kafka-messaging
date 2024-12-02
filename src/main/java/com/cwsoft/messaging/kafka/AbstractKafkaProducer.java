@@ -32,10 +32,11 @@ public abstract class AbstractKafkaProducer<T> extends ClosableAbstractProducer<
             kafkaProducer.send(record, (metadata, exception) -> {
                 if (exception != null) {
                     log.error("Failed to send message [{}] to Kafka topic [{}]", messageName, destination, exception);
-                } else {
-                    log.debug("Message [{}] successfully sent to Kafka topic [{}] - Partition [{}], Offset [{}]",
-                            messageName, destination, metadata.partition(), metadata.offset());
+                    throw new RuntimeException("Failed to send message to Kafka", exception);
                 }
+
+                log.debug("Message [{}] successfully sent to Kafka topic [{}] - Partition [{}], Offset [{}]",
+                        messageName, destination, metadata.partition(), metadata.offset());
             });
         } catch (Exception e) {
             log.error("Error while producing message [{}] to Kafka topic [{}]", messageName, destination, e);
