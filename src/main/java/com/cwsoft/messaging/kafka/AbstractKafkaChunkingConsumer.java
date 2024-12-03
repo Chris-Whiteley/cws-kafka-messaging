@@ -3,11 +3,13 @@ package com.cwsoft.messaging.kafka;
 import com.cwsoft.messaging.ClosableAbstractChunkingConsumer;
 import com.cwsoft.messaging.chunk.Chunk;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Properties;
 
 @Slf4j
@@ -15,6 +17,7 @@ public abstract class AbstractKafkaChunkingConsumer<T> extends ClosableAbstractC
 
     private final KafkaConsumer<String, String> kafkaConsumer;
     private final String topic;
+    private Iterator<ConsumerRecord<String, String>> recordIterator;
 
     /**
      * Constructor to initialize KafkaConsumer with properties and topic.
@@ -39,16 +42,23 @@ public abstract class AbstractKafkaChunkingConsumer<T> extends ClosableAbstractC
 
     @Override
     protected final Chunk retrieveChunk(Duration timeout) {
-        log.debug("Polling Kafka topic [{}] with timeout [{}]", topic, timeout);
-        ConsumerRecords<String, String> records = kafkaConsumer.poll(timeout);
-        if (!records.isEmpty()) {
-            // Assuming single-record processing for simplicity
-            var record = records.iterator().next();
-            log.debug("Received message from topic [{}]: {}", topic, record.value());
-            String encodedChunk = record.value();
-            return Chunk.decodeFromJson(encodedChunk);
+        if (recordIterator == null || !recordIterator.hasNext()) {
+            log.debug("Polling Kafka topic [{}] with timeout [{}]", topic, timeout);
+            ConsumerRecords<String, String> records = kafkaConsumer.poll(timeout);
+
+            if (records.isEmpty()) {
+                log.warn("No messages received from topic [{}] within the timeout period", topic);
+                return null;
+            }
+            recordIterator = records.iterator();
         }
-        log.warn("No messages received from topic [{}] within the timeout period", topic);
+
+        if (recordIterator.hasNext()) {
+            ConsumerRecord<String, String> record = recordIterator.next();
+            log.debug("Received message from topic [{}]: {}", topic, record.value());
+            return Chunk.decodeFromJson(record.value());
+        }
+
         return null;
     }
 
@@ -70,4 +80,3 @@ public abstract class AbstractKafkaChunkingConsumer<T> extends ClosableAbstractC
         kafkaConsumer.close();
     }
 }
-

@@ -7,6 +7,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Properties;
 
 @Slf4j
@@ -14,6 +15,7 @@ public abstract class AbstractKafkaConsumer<T> extends ClosableAbstractConsumer<
 
     private final KafkaConsumer<String, String> kafkaConsumer;
     private final String topic;
+    private Iterator<org.apache.kafka.clients.consumer.ConsumerRecord<String, String>> recordIterator;
 
     /**
      * Constructor to initialize KafkaConsumer with properties and topic.
@@ -37,7 +39,10 @@ public abstract class AbstractKafkaConsumer<T> extends ClosableAbstractConsumer<
     }
 
     /**
-     * Retrieves an encoded message from the Kafka topic, blocking for the specified timeout duration.
+     * Retrieves a single encoded message from the Kafka topic, blocking for the specified timeout duration.
+     *
+     * This implementation ensures that multiple messages retrieved in a single `poll()` are processed
+     * one at a time using an iterator.
      *
      * @param timeout the maximum duration to wait for a message.
      * @return the encoded message as a string, or null if no message is available within the timeout.
@@ -45,14 +50,27 @@ public abstract class AbstractKafkaConsumer<T> extends ClosableAbstractConsumer<
     @Override
     protected String retrieveMessage(Duration timeout) {
         log.debug("Polling Kafka topic [{}] with timeout [{}]", topic, timeout);
-        ConsumerRecords<String, String> records = kafkaConsumer.poll(timeout);
-        if (!records.isEmpty()) {
-            // Assuming single-record processing for simplicity
-            var record = records.iterator().next();
-            log.debug("Received message from topic [{}]: {}", topic, record.value());
+
+        // Check if there are more records in the iterator from the last poll
+        if (recordIterator == null || !recordIterator.hasNext()) {
+            ConsumerRecords<String, String> records = kafkaConsumer.poll(timeout);
+            if (records.isEmpty()) {
+                log.warn("No messages received from topic [{}] within the timeout period", topic);
+                return null;
+            }
+            log.debug("Retrieved [{}] messages from topic [{}]", records.count(), topic);
+            recordIterator = records.iterator();
+        }
+
+        // Process the next record
+        if (recordIterator.hasNext()) {
+            var record = recordIterator.next();
+            log.debug("Processing message from topic [{}]: {}", topic, record.value());
             return record.value();
         }
-        log.warn("No messages received from topic [{}] within the timeout period", topic);
+
+        // This point should not be reached, but return null as a fallback
+        log.warn("Iterator unexpectedly empty after poll on topic [{}]", topic);
         return null;
     }
 
@@ -74,4 +92,3 @@ public abstract class AbstractKafkaConsumer<T> extends ClosableAbstractConsumer<
         kafkaConsumer.close();
     }
 }
-
