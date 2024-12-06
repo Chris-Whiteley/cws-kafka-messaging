@@ -14,8 +14,8 @@ public abstract class AbstractKafkaChunkingProducer<T> extends ClosableAbstractC
     private final KafkaProducer<String, String> kafkaProducer;
 
     // Constructor initializes Kafka producer with provided properties
-    public AbstractKafkaChunkingProducer(Properties kafkaProperties, int chunkSize) {
-        super(chunkSize);
+    public AbstractKafkaChunkingProducer(Properties kafkaProperties, int maxMessageSize) {
+        super(maxMessageSize);
         this.kafkaProducer = new KafkaProducer<>(kafkaProperties);
     }
 
