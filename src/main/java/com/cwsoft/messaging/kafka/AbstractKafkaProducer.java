@@ -25,7 +25,6 @@ public abstract class AbstractKafkaProducer<T> extends ClosableAbstractProducer<
         try {
             log.debug("Sending message [{}] to Kafka topic [{}]", messageName, destination);
 
-            // Create a Kafka producer record
             ProducerRecord<String, String> record = new ProducerRecord<>(destination, messageName, encodedMessage);
 
             // Send message asynchronously
