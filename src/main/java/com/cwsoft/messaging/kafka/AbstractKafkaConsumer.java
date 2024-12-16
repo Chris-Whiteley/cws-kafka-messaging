@@ -34,7 +34,7 @@ public abstract class AbstractKafkaConsumer<T> extends ClosableAbstractConsumer<
      * Provides the source of the messages (in this case, the Kafka topic name).
      */
     @Override
-    public String getSource() {
+    protected String getSource() {
         return topic;
     }
 
@@ -81,7 +81,7 @@ public abstract class AbstractKafkaConsumer<T> extends ClosableAbstractConsumer<
      * @return Decoded message of type `T`.
      */
     @Override
-    public abstract T decode(String encodedMessage);
+    protected abstract T decode(String encodedMessage);
 
     /**
      * Closes the Kafka consumer gracefully.
