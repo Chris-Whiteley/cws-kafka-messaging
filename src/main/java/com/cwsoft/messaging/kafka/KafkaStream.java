@@ -44,7 +44,9 @@ public class KafkaStream<K, V> implements Stream<K, V> {
             Serde<K> keySerde,
             Serde<V> valueSerde
     ) {
-        validate(topicName, config);
+        if (topicName.isBlank()) {
+            throw new IllegalArgumentException("Topic name must not be blank");
+        }
 
         StreamsBuilder builder = new StreamsBuilder();
 
@@ -57,7 +59,7 @@ public class KafkaStream<K, V> implements Stream<K, V> {
                 org.apache.kafka.streams.kstream.Consumed.with(finalKeySerde, finalValueSerde)
         );
 
-        this.kafkaStreams = new KafkaStreams(builder.build(), applyDefaultProperties(config));
+        this.kafkaStreams = new KafkaStreams(builder.build(), applyDefaultProperties(config, topicName));
     }
 
     /**
@@ -66,9 +68,9 @@ public class KafkaStream<K, V> implements Stream<K, V> {
      * @param config the user-provided configuration
      * @return a configuration object with defaults applied
      */
-    private Properties applyDefaultProperties(Properties config) {
+    private Properties applyDefaultProperties(Properties config, String topicName) {
         Properties defaultProps = new Properties();
-        defaultProps.put("application.id", "default-app-id");
+        defaultProps.put("application.id", "kafka-stream-" + topicName);
         defaultProps.put("bootstrap.servers", "localhost:9092");
         defaultProps.put("default.key.serde", Serdes.String().getClass().getName());
         defaultProps.put("default.value.serde", Serdes.String().getClass().getName());
@@ -76,21 +78,6 @@ public class KafkaStream<K, V> implements Stream<K, V> {
         // Allow user-provided properties to override defaults
         defaultProps.putAll(config);
         return defaultProps;
-    }
-
-    /**
-     * Validates required fields.
-     *
-     * @param topicName the topic name
-     * @param config    the Kafka configuration
-     */
-    private void validate(String topicName, Properties config) {
-        if (topicName == null || topicName.isBlank()) {
-            throw new IllegalArgumentException("Topic name must not be null or blank");
-        }
-        if (config == null) {
-            throw new IllegalArgumentException("Config properties must not be null");
-        }
     }
 
     @Override

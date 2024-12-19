@@ -25,11 +25,31 @@ public abstract class AbstractKafkaChunkingConsumer<T> extends ClosableAbstractC
      * @param properties Kafka consumer configuration properties.
      * @param topic      The topic to consume messages from.
      */
-    public AbstractKafkaChunkingConsumer(Properties properties, String topic) {
-        this.kafkaConsumer = new KafkaConsumer<>(properties);
+    protected AbstractKafkaChunkingConsumer(Properties properties, String topic) {
+        this.kafkaConsumer = new KafkaConsumer<>(applyDefaultProperties(properties));
         this.topic = topic;
         kafkaConsumer.subscribe(Collections.singletonList(topic));
         log.debug("Subscribed to topic [{}]", topic);
+    }
+
+    /**
+     * Applies default Kafka properties if not already set by the user.
+     *
+     * @param config The user-provided configuration properties.
+     * @return A configuration object with defaults applied.
+     */
+    private Properties applyDefaultProperties(Properties config) {
+        Properties defaultProps = new Properties();
+        defaultProps.put("bootstrap.servers", "localhost:9092");
+        defaultProps.put("group.id", "default-group-id");
+        defaultProps.put("enable.auto.commit", "true");
+        defaultProps.put("auto.commit.interval.ms", "1000");
+        defaultProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        defaultProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+
+        // Allow user-provided properties to override defaults
+        defaultProps.putAll(config);
+        return defaultProps;
     }
 
     /**

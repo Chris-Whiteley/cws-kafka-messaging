@@ -14,7 +14,24 @@ public abstract class AbstractKafkaProducer<T> extends ClosableAbstractProducer<
 
     // Constructor initializes Kafka producer with provided properties
     public AbstractKafkaProducer(Properties kafkaProperties) {
-        this.kafkaProducer = new KafkaProducer<>(kafkaProperties);
+        this.kafkaProducer = new KafkaProducer<>(applyDefaultProperties(kafkaProperties));
+    }
+
+    /**
+     * Applies default Kafka properties if not already set by the user.
+     *
+     * @param config the user-provided configuration
+     * @return a configuration object with defaults applied
+     */
+    private Properties applyDefaultProperties(Properties config) {
+        Properties defaultProps = new Properties();
+        defaultProps.put("bootstrap.servers", "localhost:9092");
+        defaultProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        defaultProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+
+        // Allow user-provided properties to override defaults
+        defaultProps.putAll(config);
+        return defaultProps;
     }
 
     /**

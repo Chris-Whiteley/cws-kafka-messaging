@@ -2,6 +2,7 @@ package com.cwsoft.messaging.kafka;
 
 import com.cwsoft.messaging.ClosableAbstractConsumer;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 
@@ -15,7 +16,7 @@ public abstract class AbstractKafkaConsumer<T> extends ClosableAbstractConsumer<
 
     private final KafkaConsumer<String, String> kafkaConsumer;
     private final String topic;
-    private Iterator<org.apache.kafka.clients.consumer.ConsumerRecord<String, String>> recordIterator;
+    private Iterator<ConsumerRecord<String, String>> recordIterator;
 
     /**
      * Constructor to initialize KafkaConsumer with properties and topic.
@@ -23,11 +24,31 @@ public abstract class AbstractKafkaConsumer<T> extends ClosableAbstractConsumer<
      * @param properties Kafka consumer configuration properties.
      * @param topic      The topic to consume messages from.
      */
-    public AbstractKafkaConsumer(Properties properties, String topic) {
-        this.kafkaConsumer = new KafkaConsumer<>(properties);
+    protected AbstractKafkaConsumer(Properties properties, String topic) {
+        this.kafkaConsumer = new KafkaConsumer<>(applyDefaultProperties(properties));
         this.topic = topic;
         kafkaConsumer.subscribe(Collections.singletonList(topic));
         log.debug("Subscribed to topic [{}]", topic);
+    }
+
+    /**
+     * Applies default Kafka properties if not already set by the user.
+     *
+     * @param config The user-provided configuration properties.
+     * @return A configuration object with defaults applied.
+     */
+    private Properties applyDefaultProperties(Properties config) {
+        Properties defaultProps = new Properties();
+        defaultProps.put("bootstrap.servers", "localhost:9092");
+        defaultProps.put("group.id", "default-group-id");
+        defaultProps.put("enable.auto.commit", "true");
+        defaultProps.put("auto.commit.interval.ms", "1000");
+        defaultProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        defaultProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+
+        // Allow user-provided properties to override defaults
+        defaultProps.putAll(config);
+        return defaultProps;
     }
 
     /**
@@ -40,7 +61,7 @@ public abstract class AbstractKafkaConsumer<T> extends ClosableAbstractConsumer<
 
     /**
      * Retrieves a single encoded message from the Kafka topic, blocking for the specified timeout duration.
-     *
+     * <p>
      * This implementation ensures that multiple messages retrieved in a single `poll()` are processed
      * one at a time using an iterator.
      *
